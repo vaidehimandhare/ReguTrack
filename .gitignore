@@ -4,3 +4,18 @@ venv/
 .env
 .DS_Store
 .vscode/
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Environment
+.env
+
+# Test files
+test_invalid.csv
+test_report.csv
+test_report.xlsx
+
+# Uploaded reports
+uploads/
