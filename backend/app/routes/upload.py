@@ -5,6 +5,7 @@ import pandas as pd
 
 from app.services.file_processor import process_file
 from app.services.validation_engine import validate_report
+from app.services.risk_engine import calculate_risk
 
 
 router = APIRouter()
@@ -38,27 +39,31 @@ async def upload_report(file: UploadFile = File(...)):
 
     try:
 
-        # Process the uploaded file
+        # Process uploaded file
         result = process_file(file_path)
 
-        # Validation result
         validation_result = None
+        risk_result = None
 
-        # Validation for CSV and Excel files
+        # Validation and risk calculation for CSV/Excel
         if result["file_type"] in ["CSV", "Excel"]:
 
-            # Convert processed rows back into DataFrame
+            # Convert processed rows into DataFrame
             df = pd.DataFrame(result["rows"])
 
             # Run validation engine
             validation_result = validate_report(df)
+
+            # Calculate compliance risk
+            risk_result = calculate_risk(validation_result)
 
         return {
             "message": "Report uploaded successfully",
             "filename": filename,
             "file_type": result["file_type"],
             "data": result,
-            "validation": validation_result
+            "validation": validation_result,
+            "risk": risk_result
         }
 
     except Exception as e:

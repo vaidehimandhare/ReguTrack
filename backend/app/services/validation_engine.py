@@ -51,6 +51,11 @@ def validate_report(df: pd.DataFrame):
     )
 
     for row in df[converted_dates.isna()].index:
+
+        # Missing date is already reported as missing_value
+        if pd.isna(df.loc[row, "report_date"]):
+            continue
+
         errors.append({
             "type": "invalid_date",
             "severity": "ERROR",
@@ -68,6 +73,11 @@ def validate_report(df: pd.DataFrame):
         )
 
         for row in df[converted_values.isna()].index:
+
+            # Missing values are already reported above
+            if pd.isna(df.loc[row, column]):
+                continue
+
             errors.append({
                 "type": "invalid_number",
                 "severity": "ERROR",
@@ -98,7 +108,7 @@ def validate_report(df: pd.DataFrame):
         errors="coerce"
     )
 
-    # 9. Negative / invalid ranges
+    # 6. Negative / invalid ranges
     for column, values in {
         "revenue": revenue,
         "expenses": expenses
@@ -113,10 +123,13 @@ def validate_report(df: pd.DataFrame):
                 "message": f"Negative value found in '{column}'"
             })
 
-    # 10. Cross-field consistency
+    # 7. Cross-field consistency
     for row in df.index:
 
-        if pd.notna(revenue.loc[row]) and pd.notna(expenses.loc[row]):
+        if (
+            pd.notna(revenue.loc[row])
+            and pd.notna(expenses.loc[row])
+        ):
 
             if expenses.loc[row] > revenue.loc[row]:
                 warnings.append({
@@ -126,7 +139,7 @@ def validate_report(df: pd.DataFrame):
                     "message": "Expenses exceed revenue"
                 })
 
-    # 11. Total / calculation consistency
+    # 8. Calculation consistency
     calculated_profit = revenue - expenses
 
     for row in df.index:
@@ -143,7 +156,7 @@ def validate_report(df: pd.DataFrame):
                 "message": "Calculated profit is negative"
             })
 
-    # 12. Unusual changes / anomalies
+    # 9. Unusual changes / anomalies
     if len(df) > 1:
 
         revenue_changes = revenue.pct_change()
@@ -158,7 +171,10 @@ def validate_report(df: pd.DataFrame):
                     "type": "unusual_change",
                     "severity": "WARNING",
                     "row": int(row) + 1,
-                    "message": "Revenue changed by more than 100% compared with the previous record"
+                    "message": (
+                        "Revenue changed by more than 100% "
+                        "compared with the previous record"
+                    )
                 })
 
     return {
