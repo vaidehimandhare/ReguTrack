@@ -7,6 +7,9 @@ from app.services.file_processor import process_file
 from app.services.validation_engine import validate_report
 from app.services.risk_engine import calculate_risk
 
+from app.database import SessionLocal
+from app.models.report import Report
+
 
 router = APIRouter()
 
@@ -57,8 +60,28 @@ async def upload_report(file: UploadFile = File(...)):
             # Calculate compliance risk
             risk_result = calculate_risk(validation_result)
 
+        # Save report to database
+        db = SessionLocal()
+
+        try:
+
+            report = Report(
+                filename=filename,
+                status="processed",
+                risk_score=risk_result["risk_score"] if risk_result else 0,
+                risk_level=risk_result["risk_level"] if risk_result else "Low"
+            )
+
+            db.add(report)
+            db.commit()
+            db.refresh(report)
+
+        finally:
+            db.close()
+
         return {
             "message": "Report uploaded successfully",
+            "report_id": report.id,
             "filename": filename,
             "file_type": result["file_type"],
             "data": result,
@@ -72,3 +95,32 @@ async def upload_report(file: UploadFile = File(...)):
             status_code=500,
             detail=f"Error processing file: {str(e)}"
         )
+
+
+@router.get("/reports")
+def get_reports():
+
+    db = SessionLocal()
+
+    try:
+
+        reports = db.query(Report).order_by(
+            Report.created_at.desc()
+        ).all()
+
+        return {
+            "reports": [
+                {
+                    "id": report.id,
+                    "filename": report.filename,
+                    "status": report.status,
+                    "risk_score": report.risk_score,
+                    "risk_level": report.risk_level,
+                    "created_at": report.created_at
+                }
+                for report in reports
+            ]
+        }
+
+    finally:
+        db.close()
