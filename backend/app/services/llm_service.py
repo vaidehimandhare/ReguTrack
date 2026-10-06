@@ -27,17 +27,25 @@ Validation Results:
 Risk Result:
 {risk_result}
 
-Provide:
+Important instructions:
 
-1. Compliance summary
-2. Important errors and warnings
-3. Recommended corrective actions
-4. Final conclusion
+- The risk score and risk level are calculated by ReguTrack's
+  deterministic risk engine.
+- Do NOT recalculate or change the risk score.
+- Always use the exact risk level provided in Risk Result.
+- Do not call issues "critical" unless the provided risk level
+  is "Critical".
+- Do not invent regulations, laws, penalties, or facts.
+- Base your explanation only on the provided validation results.
 
-Use simple and professional language.
+Provide the response in this structure:
 
-Do not invent regulations or facts that are not present
-in the provided data.
+1. Compliance Summary
+2. Important Errors and Warnings
+3. Recommended Corrective Actions
+4. Final Conclusion
+
+Use simple, professional language.
 """
 
     response = client.chat.completions.create(
@@ -47,7 +55,7 @@ in the provided data.
                 "role": "system",
                 "content": (
                     "You are a professional AI compliance "
-                    "assistant."
+                    "assistant for a regulatory reporting system."
                 )
             },
             {
