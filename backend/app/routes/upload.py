@@ -1,13 +1,12 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 import os
 import shutil
 import pandas as pd
-from fastapi import Depends
+
 from app.dependencies import get_current_user
 from app.services.file_processor import process_file
 from app.services.validation_engine import validate_report
 from app.services.risk_engine import calculate_risk
-
 from app.database import SessionLocal
 from app.models.report import Report
 
@@ -20,7 +19,10 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 @router.post("/upload-report")
-async def upload_report(file: UploadFile = File(...)):
+async def upload_report(
+    file: UploadFile = File(...),
+    current_user: int = Depends(get_current_user)
+):
 
     # Allowed file types
     allowed_extensions = [".pdf", ".csv", ".xlsx"]
@@ -65,8 +67,8 @@ async def upload_report(file: UploadFile = File(...)):
         db = SessionLocal()
 
         try:
-
             report = Report(
+                user_id=current_user,
                 filename=filename,
                 status="processed",
                 risk_score=risk_result["risk_score"] if risk_result else 0,
@@ -107,7 +109,9 @@ def get_reports(
 
     try:
 
-        reports = db.query(Report).order_by(
+        reports = db.query(Report).filter(
+            Report.user_id == current_user
+        ).order_by(
             Report.created_at.desc()
         ).all()
 
