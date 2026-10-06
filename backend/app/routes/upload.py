@@ -24,20 +24,17 @@ async def upload_report(
     current_user: int = Depends(get_current_user)
 ):
 
-    # Allowed file types
     allowed_extensions = [".pdf", ".csv", ".xlsx"]
 
     filename = file.filename
     extension = os.path.splitext(filename)[1].lower()
 
-    # Check file extension
     if extension not in allowed_extensions:
         raise HTTPException(
             status_code=400,
             detail="Only PDF, CSV and XLSX files are supported."
         )
 
-    # Save uploaded file
     file_path = os.path.join(UPLOAD_DIR, filename)
 
     with open(file_path, "wb") as buffer:
@@ -45,25 +42,19 @@ async def upload_report(
 
     try:
 
-        # Process uploaded file
         result = process_file(file_path)
 
         validation_result = None
         risk_result = None
 
-        # Validation and risk calculation for CSV/Excel
         if result["file_type"] in ["CSV", "Excel"]:
 
-            # Convert processed rows into DataFrame
             df = pd.DataFrame(result["rows"])
 
-            # Run validation engine
             validation_result = validate_report(df)
 
-            # Calculate compliance risk
             risk_result = calculate_risk(validation_result)
 
-        # Save report to database
         db = SessionLocal()
 
         try:
@@ -170,6 +161,47 @@ def get_report_details(
             "risk_score": report.risk_score,
             "risk_level": report.risk_level,
             "created_at": report.created_at
+        }
+
+    finally:
+        db.close()
+
+
+@router.delete("/reports/{report_id}")
+def delete_report(
+    report_id: int,
+    current_user: int = Depends(get_current_user)
+):
+
+    db = SessionLocal()
+
+    try:
+
+        report = db.query(Report).filter(
+            Report.id == report_id,
+            Report.user_id == current_user
+        ).first()
+
+        if not report:
+            raise HTTPException(
+                status_code=404,
+                detail="Report not found"
+            )
+
+        file_path = os.path.join(
+            UPLOAD_DIR,
+            report.filename
+        )
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        db.delete(report)
+        db.commit()
+
+        return {
+            "message": "Report deleted successfully",
+            "report_id": report_id
         }
 
     finally:
