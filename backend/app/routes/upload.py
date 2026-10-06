@@ -2,7 +2,8 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 import os
 import shutil
 import pandas as pd
-
+from fastapi import Depends
+from app.dependencies import get_current_user
 from app.services.file_processor import process_file
 from app.services.validation_engine import validate_report
 from app.services.risk_engine import calculate_risk
@@ -98,7 +99,9 @@ async def upload_report(file: UploadFile = File(...)):
 
 
 @router.get("/reports")
-def get_reports():
+def get_reports(
+    current_user: int = Depends(get_current_user)
+):
 
     db = SessionLocal()
 
