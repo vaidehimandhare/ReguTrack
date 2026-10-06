@@ -7,6 +7,7 @@ from app.dependencies import get_current_user
 from app.services.file_processor import process_file
 from app.services.validation_engine import validate_report
 from app.services.risk_engine import calculate_risk
+from app.services.llm_service import generate_compliance_explanation
 from app.database import SessionLocal
 from app.models.report import Report
 
@@ -42,19 +43,30 @@ async def upload_report(
 
     try:
 
+        # Step 1: Process uploaded file
         result = process_file(file_path)
 
         validation_result = None
         risk_result = None
+        ai_explanation = None
 
+        # Step 2: Validate CSV/Excel reports
         if result["file_type"] in ["CSV", "Excel"]:
 
             df = pd.DataFrame(result["rows"])
 
             validation_result = validate_report(df)
 
+            # Step 3: Calculate compliance risk
             risk_result = calculate_risk(validation_result)
 
+            # Step 4: Generate AI compliance explanation
+            ai_explanation = generate_compliance_explanation(
+                validation_result,
+                risk_result
+            )
+
+        # Step 5: Save report information in database
         db = SessionLocal()
 
         try:
@@ -82,6 +94,7 @@ async def upload_report(
         finally:
             db.close()
 
+        # Step 6: Return complete response
         return {
             "message": "Report uploaded successfully",
             "report_id": report.id,
@@ -89,7 +102,8 @@ async def upload_report(
             "file_type": result["file_type"],
             "data": result,
             "validation": validation_result,
-            "risk": risk_result
+            "risk": risk_result,
+            "ai_compliance_assistant": ai_explanation
         }
 
     except Exception as e:
