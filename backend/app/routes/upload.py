@@ -67,12 +67,21 @@ async def upload_report(
         db = SessionLocal()
 
         try:
+
             report = Report(
                 user_id=current_user,
                 filename=filename,
                 status="processed",
-                risk_score=risk_result["risk_score"] if risk_result else 0,
-                risk_level=risk_result["risk_level"] if risk_result else "Low"
+                risk_score=(
+                    risk_result["risk_score"]
+                    if risk_result
+                    else 0
+                ),
+                risk_level=(
+                    risk_result["risk_level"]
+                    if risk_result
+                    else "Low"
+                )
             )
 
             db.add(report)
@@ -127,6 +136,40 @@ def get_reports(
                 }
                 for report in reports
             ]
+        }
+
+    finally:
+        db.close()
+
+
+@router.get("/reports/{report_id}")
+def get_report_details(
+    report_id: int,
+    current_user: int = Depends(get_current_user)
+):
+
+    db = SessionLocal()
+
+    try:
+
+        report = db.query(Report).filter(
+            Report.id == report_id,
+            Report.user_id == current_user
+        ).first()
+
+        if not report:
+            raise HTTPException(
+                status_code=404,
+                detail="Report not found"
+            )
+
+        return {
+            "id": report.id,
+            "filename": report.filename,
+            "status": report.status,
+            "risk_score": report.risk_score,
+            "risk_level": report.risk_level,
+            "created_at": report.created_at
         }
 
     finally:
