@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from app.database import Base
 
@@ -7,7 +8,11 @@ from app.database import Base
 class Report(Base):
     __tablename__ = "reports"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
 
     user_id = Column(
         Integer,
@@ -15,7 +20,15 @@ class Report(Base):
         nullable=False
     )
 
-    filename = Column(String, nullable=False)
+    filename = Column(
+        String,
+        nullable=False
+    )
+
+    file_type = Column(
+        String,
+        nullable=True
+    )
 
     status = Column(
         String,
@@ -32,7 +45,19 @@ class Report(Base):
         default="Low"
     )
 
+    validation_result = Column(
+        Text,
+        nullable=True
+    )
+
+    ai_explanation = Column(
+        Text,
+        nullable=True
+    )
+
     created_at = Column(
         DateTime,
-        default=datetime.utcnow
+        default=lambda: datetime.now(
+            ZoneInfo("Asia/Kolkata")
+        )
     )
